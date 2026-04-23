@@ -841,22 +841,28 @@ function parseCSV(raw) {
   const header = lines[0].toLowerCase();
   const txs = [];
 
-  // ── Revolut all-account export: Type, Product, Started Date, Description, Amount
-  // e.g. "Card Payment,Current,2024-01-15 14:22:00,OpenAI,-22.86"
+  // ── Revolut all-account export (both column layouts)
+  // Old: Type, Product, Started Date, Description, Amount, ...
+  // New: Type, Product, Started Date, Completed Date, Description, Amount, Fee, Currency, State, Balance
   if (header.includes("started date") && header.includes("product") && header.includes("description")) {
-    // Only Card Payment and Fee rows on the Current account are real business-expense candidates.
-    // Transfers (personal/internal), Topups, Rewards, Interest, ATM cash, Exchanges are skipped.
+    const headerCols = splitLine(lines[0]).map((h) => h.toLowerCase().trim());
+    const iType    = 0;
+    const iProduct = 1;
+    const iDate    = 2;
+    const iDesc    = headerCols.indexOf("description");
+    const iAmt     = headerCols.findIndex((h) => h === "amount" || h.startsWith("amount "));
+    if (iDesc === -1 || iAmt === -1) return txs; // unrecognised layout
     const SKIP_TYPES = new Set(["topup","reward","interest","card refund","refund","exchange","atm","transfer"]);
     lines.slice(1).forEach((line, i) => {
       const cols = splitLine(line);
-      if (cols.length < 5) return;
-      const type    = cols[0].toLowerCase().trim();
-      const product = cols[1].toLowerCase().trim();
-      const dateRaw = cols[2].trim();
-      const desc    = cols[3].trim();
-      const amt     = parseFloat(cols[4]?.replace(/,/g, ""));
-      if (product !== "current") return;      // savings/deposit are internal
-      if (isNaN(amt) || amt >= 0) return;     // keep only outgoing (negative)
+      if (cols.length <= Math.max(iDesc, iAmt)) return;
+      const type    = cols[iType].toLowerCase().trim();
+      const product = cols[iProduct].toLowerCase().trim();
+      const dateRaw = cols[iDate].trim();
+      const desc    = cols[iDesc].trim();
+      const amt     = parseFloat(cols[iAmt]?.replace(/,/g, ""));
+      if (product !== "current") return;
+      if (isNaN(amt) || amt >= 0) return;
       if (SKIP_TYPES.has(type)) return;
       const amount = Math.abs(amt);
       if (desc && amount > 0)
@@ -1947,7 +1953,7 @@ export default function TaxSweep() {
             ))}
           </div>
 
-          {resultsTab === "list" ? (
+          {resultsTab === "list" && (
           <div style={{ display: viewMode === "desktop" ? "grid" : "block", gridTemplateColumns: "1fr 380px", gap: 24, alignItems: "flex-start" }}>
             {/* Left: category breakdown */}
             <div className="ts-fade-up" style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22, marginBottom: viewMode === "desktop" ? 0 : 20 }}>
@@ -2007,7 +2013,9 @@ export default function TaxSweep() {
               </p>
             </div>
           </div>
-          ) : (
+          )}
+
+          {resultsTab === "dashboard" && (
             <div className="ts-fade-up" style={{ display: "grid", gridTemplateColumns: viewMode === "desktop" ? "1fr 1fr" : "1fr", gap: 24 }}>
               <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 22, height: 350 }}>
                 <h2 style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".09em", color: C.muted, marginBottom: 18 }}>Expenses by Category</h2>
