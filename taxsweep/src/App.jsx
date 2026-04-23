@@ -1755,13 +1755,13 @@ export default function TaxSweep() {
                     )}
                     {/* Category + confidence + learned badge */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 6, flexWrap: "wrap" }}>
-                      <select 
+                      <select
                         value={currentCard.category}
                         onChange={(e) => updateCategory(currentCard.id, e.target.value)}
-                        style={{ 
+                        style={{
                           appearance: "none",
                           border: `1px solid ${catColor(currentCard.category)}40`,
-                          background: `${catColor(currentCard.category)}15`,
+                          backgroundColor: `${catColor(currentCard.category)}15`,
                           color: catColor(currentCard.category),
                           borderRadius: 100,
                           padding: "2px 24px 2px 10px",
@@ -1774,7 +1774,8 @@ export default function TaxSweep() {
                           outline: "none",
                           backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="%23${catColor(currentCard.category).replace('#', '')}" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')`,
                           backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 4px center"
+                          backgroundPosition: "right 4px center",
+                          backgroundSize: "12px 12px"
                         }}
                       >
                         {[...CATEGORIES, "Uncategorized"].map(c => <option key={c} value={c} style={{color: '#000'}}>{c}</option>)}
@@ -1896,13 +1897,13 @@ export default function TaxSweep() {
                           </div>
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 3, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                             <span>{tx.date}</span>
-                            <select 
+                            <select
                               value={tx.category}
                               onChange={(e) => updateCategory(tx.id, e.target.value)}
-                              style={{ 
+                              style={{
                                 appearance: "none",
                                 border: `1px solid ${catColor(tx.category)}40`,
-                                background: `${catColor(tx.category)}15`,
+                                backgroundColor: `${catColor(tx.category)}15`,
                                 color: catColor(tx.category),
                                 borderRadius: 100,
                                 padding: "2px 20px 2px 8px",
@@ -1915,7 +1916,8 @@ export default function TaxSweep() {
                                 outline: "none",
                                 backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="%23${catColor(tx.category).replace('#', '')}" height="10" viewBox="0 0 24 24" width="10" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')`,
                                 backgroundRepeat: "no-repeat",
-                                backgroundPosition: "right 4px center"
+                                backgroundPosition: "right 4px center",
+                                backgroundSize: "10px 10px"
                               }}
                             >
                               {[...CATEGORIES, "Uncategorized"].map(c => <option key={c} value={c} style={{color: '#000'}}>{c}</option>)}
