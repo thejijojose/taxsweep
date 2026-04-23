@@ -16,15 +16,14 @@ export const CATEGORIES = [
   "Utilities",
   "Insurance",
   "Training & Education",
-  "Bank Charges"
+  "Financial"
 ];
 
 // Training data: synthetic seed terms + real examples derived from bookkeeping_classified_v2.csv
 const TRAINING_DATA = [
   // ── Personal / Non-deductible ─────────────────────────────────────────────
-  { c: "Personal / Non-deductible", text: "supermarket groceries food drink clothing retail apparel fitness gym leisure stream game bet lottery casino entertainment shopping mall boutique brand outlet" },
-  { c: "Personal / Non-deductible", text: "hair salon barber beauty chemist pharmacy kids toys pet veterinary mortgage rent loan savings salary wages childcare charity gambling pension credit" },
-  { c: "Personal / Non-deductible", text: "john murphy kelly ryan walsh michael paul mary david james doyle sean house hotel savings joint weekly payroll bingo credit union cheque" },
+  { c: "Personal / Non-deductible", text: "supermarket groceries clothing retail apparel gym leisure stream game bet lottery casino shopping mall boutique outlet hair salon barber beauty chemist pharmacy kids toys pet veterinary" },
+  { c: "Personal / Non-deductible", text: "mortgage rent loan savings salary wages childcare charity gambling pension credit union cheque bingo joint payroll weekly household personal" },
 
   // ── Meals & Entertainment ─────────────────────────────────────────────────
   { c: "Meals & Entertainment", text: "restaurant pub bar cafe coffee tea bistro deli takeaway delivery eat drink food burger pizza chicken brewery hotel lounge dining caterer" },
@@ -68,9 +67,9 @@ const TRAINING_DATA = [
   { c: "Training & Education", text: "training course workshop seminar conference education skill certification exam cpd" },
   { c: "Training & Education", text: "college school dcu ucd university cao fees fund tuition griffith dominican loreto belvedere parentpay" },
 
-  // ── Bank Charges ──────────────────────────────────────────────────────────
-  { c: "Bank Charges", text: "bank charge fee interest transaction commission maintenance account overdraft monthly yearly" },
-  { c: "Bank Charges", text: "council property lpt lps county tax adjustment unpaid revenue fingal donegal roscommon kilkenny tipperary kildare wicklow meath monaghan" },
+  // ── Financial ─────────────────────────────────────────────────────────────
+  { c: "Financial", text: "bank charge fee interest transaction commission maintenance account overdraft monthly yearly" },
+  { c: "Financial", text: "council property lpt lps county tax adjustment unpaid revenue fingal donegal roscommon kilkenny tipperary kildare wicklow meath monaghan" },
 ];
 
 const model = {

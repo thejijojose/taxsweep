@@ -8,6 +8,7 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { createMccEnricher, inferTaxCategoryFromMcc } from "./mccEnrichment";
 import { matchIrishMerchantCategory } from "./merchantIreland";
+import { predictCategory, CATEGORIES } from "./mlClassifier";
 
 // ── Font & global style injection ─────────────────────────────────────────────
 (() => {
@@ -98,7 +99,7 @@ const CATS = {
   "Marketing & Advertising":   "#f97316",
   "Training & Education":      "#6366f1",
   "Meals & Entertainment":     "#84cc16",
-  "Bank Charges":              "#64748b",
+  "Financial":              "#64748b",
   "Insurance":                 "#14b8a6",
   "Utilities":                 "#a855f7",
   "Personal / Non-deductible": "#ef4444",
@@ -152,7 +153,7 @@ const TAX_RULES = [
       "zapier","make.com","integromat","n8n","automate.io","pipedream",
       "egghead","frontend masters","pluralsight","linkedin learning",
       "buzzsprout","transistor","captivate","anchor","podbean",
-      "google drive","google one","google workspace","google cloud","google ads",
+      "google drive","google one","google workspace","google cloud","google ads","apple.com/bill","icloud",
     ],
     keywords: [
       "subscription","licence","license","saas","software licence","software license",
@@ -236,7 +237,7 @@ const TAX_RULES = [
     basis: "s81 TCA 1997 or capital allowances s284 TCA 1997 – 12.5% p.a. over 8 years for items over €500",
     note: "Under €500: expense directly. Over €500: capital allowances at 12.5% per year. Keep invoice showing business purpose.",
     merchants: [
-      "apple store","apple.com","apple online store","dell","lenovo","hp ","asus","acer",
+      "apple store","apple online store","dell","lenovo","hp ","asus","acer",
       "samsung","lg electronics","sony","panasonic","brother","epson","canon",
       "currys","harvey norman","komplett","mymemory","scan computers","box.co.uk",
       "screwfix","woodies diy","b&q","toolstation","machine mart","speedy hire","mts hire",
@@ -312,7 +313,7 @@ const TAX_RULES = [
     ],
   },
   {
-    category: "Bank Charges",
+    category: "Financial",
     probability: 0.94,
     basis: "s81 TCA 1997 – bank charges on business account wholly & exclusively for trade",
     note: "100% deductible for charges on a business account. Ensure personal account charges are excluded.",
@@ -389,7 +390,7 @@ const TAX_RULES = [
       "tesco","dunnes stores","dunnes","lidl","aldi","supervalu","centra","spar",
       "marks & spencer food","marks spencer","m&s food","freshii","leon restaurants",
       "penneys","primark","zara","h&m","asos","next","river island","tk maxx",
-      "netflix","spotify","disney+","amazon prime","apple tv+","now tv","sky entertainment",
+      "netflix","spotify","disney+","amazon prime","apple tv+","apple music","itunes","now tv","sky entertainment",
       "flyefit","energy fitness","pure gym","total fitness","westwood club",
       "boots pharmacy","lloyds pharmacy","hickeys pharmacy","life pharmacy",
       "rte licence","tv licence","national lottery","lotto terminal",
@@ -466,7 +467,7 @@ const AMOUNT_RULES = [
     ],
   },
   {
-    category: "Bank Charges",
+    category: "Financial",
     ranges: [
       { min: 50, mult: 0.70, note: "Unusually high bank charge. Confirm this is a legitimate fee on a dedicated business account. Personal account charges are not deductible." },
     ],
@@ -605,6 +606,9 @@ function classifyTransaction(tx) {
     if (score > bestScore) { bestScore = score; best = rule; }
   }
 
+  // Signal D: ML Naive Bayes
+  const ml = predictCategory(desc);
+
   // Combine signals into a final category. Merchant gazetteer is highest priority.
   const candidates = new Map(); // category -> { score, sources: [] }
   const add = (category, score, source) => {
@@ -617,6 +621,7 @@ function classifyTransaction(tx) {
   // Weighting: emphasize first-level merchant matching.
   if (gaz) add(gaz.category, Math.min(0.99, gaz.score * 0.92 + 0.08), `merchant:${gaz.merchant}`);
   if (mccInf) add(mccInf.category, Math.min(0.99, mccInf.score), `mcc:${mccInf.mcc}`);
+  if (ml) add(ml.category, Math.min(0.99, ml.score * 0.85), "ml");
   if (best && bestScore) add(best.category, Math.min(0.99, best.probability * (bestScore >= 0.9 ? 1.0 : 0.88)), "rules");
 
   const sorted = [...candidates.entries()].sort((a, b) => b[1].score - a[1].score);
@@ -657,6 +662,7 @@ function classifyTransaction(tx) {
       chosen: { category, rawScore: Number(rawScore.toFixed(3)), combined: Number(combined.toFixed(3)) },
       gaz,
       mccInf,
+      ml,
       rules: best ? { category: best.category, score: Number(bestScore.toFixed(3)) } : null,
     },
   };
@@ -675,9 +681,10 @@ function detectSubscriptions(txs) {
 }
 
 // ── Manual test harness (narrative → classification) ──────────────────────────
-function CategorizerLab({ viewMode, onBack }) {
+function CategoriserLab({ viewMode, onBack }) {
   const [narrative, setNarrative] = useState("");
   const [amount, setAmount] = useState("");
+  const [mccInput, setMccInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [err, setErr] = useState(null);
@@ -690,17 +697,25 @@ function CategorizerLab({ viewMode, onBack }) {
     setBusy(true);
     try {
       if (!enricherRef.current) enricherRef.current = await createMccEnricher();
+      const mccCode = mccInput.trim() || null;
       const tx = {
         id: "lab_tx",
         description: desc,
         amount: Number.isFinite(parseFloat(amount)) ? Math.abs(parseFloat(amount)) : 0,
         date: new Date().toISOString().slice(0, 10),
+        mcc: mccCode,
+        mcc_description: mccCode ? `MCC ${mccCode}` : null,
       };
       const enriched = enricherRef.current.enrichOne(tx);
+      // Preserve manually-entered MCC if enricher didn't find one
+      if (mccCode && !enriched.mcc) {
+        enriched.mcc = mccCode;
+        enriched.mcc_description = `MCC ${mccCode}`;
+      }
       const classified = classifyTransaction(enriched);
       setResult({ tx: enriched, cls: classified });
     } catch (e) {
-      setErr(e?.message ?? "Failed to run categorizer.");
+      setErr(e?.message ?? "Failed to run categoriser.");
     } finally {
       setBusy(false);
     }
@@ -716,7 +731,7 @@ function CategorizerLab({ viewMode, onBack }) {
       <div style={{ width: "100%", maxWidth: viewMode === "desktop" ? 940 : 560 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
           <div>
-            <div style={{ fontFamily: C.display, fontSize: 26, fontWeight: 750, color: C.text, letterSpacing: "-.02em" }}>Categorizer Lab</div>
+            <div style={{ fontFamily: C.display, fontSize: 26, fontWeight: 750, color: C.text, letterSpacing: "-.02em" }}>Categoriser Lab</div>
             <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Paste a narrative to test MCC enrichment + category classification.</div>
           </div>
           <button onClick={onBack} style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 10, padding: "9px 14px", color: C.muted, cursor: "pointer", fontSize: 13, fontFamily: C.body, fontWeight: 600 }}>
@@ -748,12 +763,21 @@ function CategorizerLab({ viewMode, onBack }) {
                 inputMode="decimal"
                 style={{ width: "100%", borderRadius: 12, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 14, fontFamily: C.mono, padding: "10px 12px", outline: "none", boxSizing: "border-box" }}
               />
+              <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".09em", fontWeight: 700, marginTop: 12, marginBottom: 8 }}>MCC code (optional)</div>
+              <input
+                value={mccInput}
+                onChange={(e) => setMccInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                placeholder="e.g. 5812"
+                inputMode="numeric"
+                maxLength={4}
+                style={{ width: "100%", borderRadius: 12, border: `1px solid ${C.border}`, background: C.surfaceAlt, color: C.text, fontSize: 14, fontFamily: C.mono, padding: "10px 12px", outline: "none", boxSizing: "border-box" }}
+              />
               <button
                 onClick={run}
                 disabled={busy || !narrative.trim()}
                 style={{ marginTop: 12, width: "100%", background: busy ? `${C.green}90` : C.green, color: "#fff", border: "none", borderRadius: 12, padding: "11px 14px", fontSize: 14, fontWeight: 700, cursor: busy ? "default" : "pointer", fontFamily: C.body, opacity: !narrative.trim() ? 0.55 : 1 }}
               >
-                {busy ? "Running…" : "Run categorizer"}
+                {busy ? "Running…" : "Run categoriser"}
               </button>
             </div>
           </div>
@@ -784,38 +808,60 @@ function CategorizerLab({ viewMode, onBack }) {
                   {result.cls.note}
                 </div>
               )}
-              {result.tx.mcc && (
-                <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.55 }}>
-                  <strong>MCC:</strong> {result.tx.mcc} — {result.tx.mcc_description}
-                </div>
-              )}
+              <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.55, marginTop: 8, background: C.surfaceAlt, padding: "8px 12px", borderRadius: 10, display: "flex", flexDirection: "column", gap: 3 }}>
+                <div><strong>MCC code:</strong> {result.tx.mcc ?? <span style={{ color: C.muted }}>—</span>}</div>
+                <div><strong>MCC description:</strong> {result.tx.mcc_description ?? <span style={{ color: C.muted }}>Not matched</span>}</div>
+                {result.cls.classifier_debug?.mccInf ? (
+                  <div><strong>MCC category:</strong> <span style={{ color: catColor(result.cls.classifier_debug.mccInf.category) }}>{result.cls.classifier_debug.mccInf.category}</span> <span style={{ color: C.muted }}>({Math.round(result.cls.classifier_debug.mccInf.score * 100)}% — {result.cls.classifier_debug.mccInf.reason})</span></div>
+                ) : (
+                  <div><strong>MCC category:</strong> <span style={{ color: C.muted }}>No MCC inference</span></div>
+                )}
+              </div>
             </div>
 
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: 18 }}>
-              <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".09em", fontWeight: 700, marginBottom: 12 }}>Match details</div>
-              <div style={{ fontFamily: C.mono, fontSize: 12.5, color: C.text, background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px", lineHeight: 1.55, marginBottom: 12, whiteSpace: "pre-wrap" }}>
+              <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".09em", fontWeight: 700, marginBottom: 12 }}>Signal breakdown</div>
+              <div style={{ fontFamily: C.mono, fontSize: 12.5, color: C.text, background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px", lineHeight: 1.55, marginBottom: 14, whiteSpace: "pre-wrap" }}>
                 {result.tx.description}
               </div>
-              {result.tx.mcc_match?.status === "matched" ? (
-                <>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                    {badge(`score ${result.tx.mcc_match.score}`, C.blue, `${C.blue}12`)}
-                    {badge(`conf ${result.tx.mcc_match.confidence}`, C.green, `${C.green}12`)}
-                    {badge(`token ${result.tx.mcc_match.components?.token ?? "-"}`, C.muted, `${C.muted}12`)}
-                    {badge(`trigram ${result.tx.mcc_match.components?.trigram ?? "-"}`, C.muted, `${C.muted}12`)}
+              {result.cls.classifier_debug && (() => {
+                const dbg = result.cls.classifier_debug;
+                const winCat = result.cls.category;
+                const signals = [
+                  { label: "Gazetteer", category: dbg.gaz?.category ?? null, score: dbg.gaz?.score ?? null, detail: dbg.gaz?.merchant ?? null },
+                  { label: "ML", category: dbg.ml?.category ?? null, score: dbg.ml?.score ?? null, detail: null },
+                  { label: "Rules", category: dbg.rules?.category ?? null, score: dbg.rules?.score ?? null, detail: null },
+                  { label: "MCC", category: dbg.mccInf?.category ?? null, score: dbg.mccInf?.score ?? null, detail: dbg.mccInf?.reason ?? null },
+                ];
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {signals.map(({ label, category, score, detail }) => {
+                      const hit = !!category;
+                      const isWinner = hit && category === winCat;
+                      return (
+                        <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: isWinner ? `${C.green}12` : C.surfaceAlt, border: `1px solid ${isWinner ? C.green + "40" : C.border}` }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".07em", minWidth: 64 }}>{label}</span>
+                          {hit ? (
+                            <>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: catColor(category), flex: 1 }}>{category}{detail ? <span style={{ fontWeight: 400, color: C.muted }}> ({detail})</span> : null}</span>
+                              <span style={{ fontSize: 11, color: C.muted, fontFamily: C.mono }}>{Math.round(score * 100)}%</span>
+                              {isWinner && <span style={{ fontSize: 10, fontWeight: 700, color: C.green, background: `${C.green}20`, padding: "2px 7px", borderRadius: 999 }}>CHOSEN</span>}
+                            </>
+                          ) : (
+                            <span style={{ fontSize: 12, color: C.muted, flex: 1 }}>No match</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {dbg.chosen && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: C.muted, lineHeight: 1.5 }}>
+                        Final score: <span style={{ fontFamily: C.mono }}>{Math.round(dbg.chosen.combined * 100)}%</span>
+                        {dbg.chosen.combined < 0.45 && <span style={{ color: C.red }}> — below threshold</span>}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ fontSize: 12, color: C.sub, lineHeight: 1.55 }}>
-                    <strong>Matched training narrative:</strong>
-                    <div style={{ marginTop: 6, fontFamily: C.mono, fontSize: 12, background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 12px", whiteSpace: "pre-wrap" }}>
-                      {result.tx.mcc_match.matched_description}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.55 }}>
-                  No MCC match found (best score: {Math.round((result.tx.mcc_match?.score ?? 0) * 100)}%).
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         )}
@@ -852,7 +898,7 @@ function parseCSV(raw) {
     const iDesc    = headerCols.indexOf("description");
     const iAmt     = headerCols.findIndex((h) => h === "amount" || h.startsWith("amount "));
     if (iDesc === -1 || iAmt === -1) return txs; // unrecognised layout
-    const SKIP_TYPES = new Set(["topup","reward","interest","card refund","refund","exchange","atm","transfer"]);
+    const SKIP_TYPES = new Set(["topup","reward","interest","card refund","refund","exchange","atm"]);
     lines.slice(1).forEach((line, i) => {
       const cols = splitLine(line);
       if (cols.length <= Math.max(iDesc, iAmt)) return;
@@ -1325,6 +1371,10 @@ export default function TaxSweep() {
     setDecisions((p) => ({ ...p, [id]: action }));
   };
 
+  const updateCategory = (id, newCat) => {
+    setAnalyzed((prev) => prev.map((t) => t.id === id ? { ...t, category: newCat, probability: 1.0, note: "Manually categorised" } : t));
+  };
+
   const handleReceiptUpload = (txId, url) => {
     setReceiptKeys((prev) => new Set([...prev, txId]));
     setReceiptUrls((prev) => ({ ...prev, [txId]: url }));
@@ -1441,7 +1491,7 @@ export default function TaxSweep() {
 
   // ══════════════════════════════════════════════════════════════════════════
   if (stage === "lab") return (
-    <CategorizerLab
+    <CategoriserLab
       viewMode={viewMode}
       onBack={() => setStage("upload")}
     />
@@ -1510,7 +1560,7 @@ export default function TaxSweep() {
               style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 12, padding: "10px 14px", color: C.muted, cursor: "pointer", fontSize: 13, fontFamily: C.body, fontWeight: 650, display: "inline-flex", gap: 8, alignItems: "center" }}
               title="Test categorisation without uploading a file"
             >
-              <Sparkles size={14} /> Test categorizer
+              <Sparkles size={14} /> Test categoriser
             </button>
           </div>
 
@@ -1687,7 +1737,30 @@ export default function TaxSweep() {
                     )}
                     {/* Category + confidence + learned badge */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, gap: 6, flexWrap: "wrap" }}>
-                      <Pill color={catColor(currentCard.category)}>{currentCard.category}</Pill>
+                      <select 
+                        value={currentCard.category}
+                        onChange={(e) => updateCategory(currentCard.id, e.target.value)}
+                        style={{ 
+                          appearance: "none",
+                          border: `1px solid ${catColor(currentCard.category)}40`,
+                          background: `${catColor(currentCard.category)}15`,
+                          color: catColor(currentCard.category),
+                          borderRadius: 100,
+                          padding: "2px 24px 2px 10px",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          fontFamily: C.body,
+                          textTransform: "uppercase",
+                          letterSpacing: ".06em",
+                          cursor: "pointer",
+                          outline: "none",
+                          backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="%23${catColor(currentCard.category).replace('#', '')}" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')`,
+                          backgroundRepeat: "no-repeat",
+                          backgroundPosition: "right 4px center"
+                        }}
+                      >
+                        {[...CATEGORIES, "Uncategorized"].map(c => <option key={c} value={c} style={{color: '#000'}}>{c}</option>)}
+                      </select>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                         {learnedSuggestion && (
                           <span style={{ fontSize: 10, display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", borderRadius: 100, background: `${C.green}12`, color: C.green, border: `1px solid ${C.green}35` }}>
@@ -1805,7 +1878,30 @@ export default function TaxSweep() {
                           </div>
                           <div style={{ fontSize: 11, color: C.muted, marginTop: 3, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                             <span>{tx.date}</span>
-                            <Pill color={catColor(tx.category)}>{tx.category}</Pill>
+                            <select 
+                              value={tx.category}
+                              onChange={(e) => updateCategory(tx.id, e.target.value)}
+                              style={{ 
+                                appearance: "none",
+                                border: `1px solid ${catColor(tx.category)}40`,
+                                background: `${catColor(tx.category)}15`,
+                                color: catColor(tx.category),
+                                borderRadius: 100,
+                                padding: "2px 20px 2px 8px",
+                                fontSize: 10,
+                                fontWeight: 600,
+                                fontFamily: C.body,
+                                textTransform: "uppercase",
+                                letterSpacing: ".06em",
+                                cursor: "pointer",
+                                outline: "none",
+                                backgroundImage: `url('data:image/svg+xml;utf8,<svg fill="%23${catColor(tx.category).replace('#', '')}" height="10" viewBox="0 0 24 24" width="10" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>')`,
+                                backgroundRepeat: "no-repeat",
+                                backgroundPosition: "right 4px center"
+                              }}
+                            >
+                              {[...CATEGORIES, "Uncategorized"].map(c => <option key={c} value={c} style={{color: '#000'}}>{c}</option>)}
+                            </select>
                             <Pill color={confCol}>{Math.round(tx.probability * 100)}%</Pill>
                           </div>
                         </div>
