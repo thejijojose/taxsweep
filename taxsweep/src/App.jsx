@@ -868,7 +868,9 @@ function parseCSV(raw) {
       if (desc && amount > 0)
         txs.push({ id: `tx_${i}`, date: dateRaw.split(" ")[0], description: desc, amount });
     });
-    return txs;
+    // Only short-circuit if we actually parsed transactions. Otherwise, fall through
+    // to the generic parsers below (some exports vary by locale/column naming).
+    if (txs.length) return txs;
   }
 
   // ── All other formats (AIB/BOI, Revolut Business, generic) ──────────────────
