@@ -5,6 +5,7 @@
 
 export const CATEGORIES = [
   "Personal / Non-deductible",
+  "Groceries",
   "Meals & Entertainment",
   "Travel & Transport",
   "Office & Stationery",
@@ -25,9 +26,13 @@ const TRAINING_DATA = [
   { c: "Personal / Non-deductible", text: "supermarket groceries clothing retail apparel gym leisure stream game bet lottery casino shopping mall boutique outlet hair salon barber beauty chemist pharmacy kids toys pet veterinary" },
   { c: "Personal / Non-deductible", text: "mortgage rent loan savings salary wages childcare charity gambling pension credit union cheque bingo joint payroll weekly household personal" },
 
+  // ── Groceries ─────────────────────────────────────────────────────────────
+  { c: "Groceries", text: "tesco dunnes supervalu centra lidl aldi spar eurospar londis mace costcutter daybreak iceland fresh joyce fallon byrne donnybrook" },
+  { c: "Groceries", text: "sainsburys asda morrisons waitrose coop cooperative farmfoods budgens nisa booths marks spencer grocery supermarket convenience store food shop" },
+
   // ── Meals & Entertainment ─────────────────────────────────────────────────
-  { c: "Meals & Entertainment", text: "restaurant pub bar cafe coffee tea bistro deli takeaway delivery eat drink food burger pizza chicken brewery hotel lounge dining caterer" },
-  { c: "Meals & Entertainment", text: "catering centra supervalu tesco spar lidl aldi dunnes marks spencer sysco conaty buckley restaurants takeaway patisserie liffey mills ranch" },
+  { c: "Meals & Entertainment", text: "restaurant pub bar cafe coffee tea bistro deli takeaway delivery eat drink burger pizza chicken brewery hotel lounge dining caterer" },
+  { c: "Meals & Entertainment", text: "catering sysco conaty buckley patisserie liffey mills ranch starbucks costa insomnia mcdonalds subway deliveroo justeat ubereats nandos wagamama" },
 
   // ── Travel & Transport ────────────────────────────────────────────────────
   { c: "Travel & Transport", text: "airline flight train bus coach taxi cab hackney toll parking car rental hire petrol diesel fuel station transit ferry airport mechanic garage" },

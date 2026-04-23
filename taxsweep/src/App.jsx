@@ -98,8 +98,9 @@ const CATS = {
   "Equipment & Tools":         "#10b981",
   "Marketing & Advertising":   "#f97316",
   "Training & Education":      "#6366f1",
+  "Groceries":                 "#22c55e",
   "Meals & Entertainment":     "#84cc16",
-  "Financial":              "#64748b",
+  "Financial":                 "#64748b",
   "Insurance":                 "#14b8a6",
   "Utilities":                 "#a855f7",
   "Personal / Non-deductible": "#ef4444",
@@ -363,6 +364,25 @@ const TAX_RULES = [
     ],
   },
   {
+    category: "Groceries",
+    probability: 0.03,
+    basis: "s81 TCA 1997 – personal grocery shopping is not a deductible business expense",
+    note: "Grocery shopping is personal expenditure and not allowable as a deduction. Keep separate from business transactions.",
+    merchants: [
+      // Ireland
+      "tesco","tesco ireland","dunnes","dunnes stores","supervalu","centra","lidl","aldi",
+      "spar","eurospar","londis","mace","costcutter","daybreak","iceland","fresh",
+      "joyces","joyce supermarket","donnybrook fair","fallon and byrne","fallon & byrne",
+      "marks & spencer food","m&s food","m&s simply food","polonez","martin's food market","martins food",
+      // UK
+      "sainsburys","sainsbury's","asda","morrisons","waitrose","co-op food","coop food",
+      "cooperative food","farmfoods","budgens","nisa local","booths",
+    ],
+    keywords: [
+      "grocery","groceries","supermarket","food shop","weekly shop","food shopping","convenience store",
+    ],
+  },
+  {
     category: "Meals & Entertainment",
     probability: 0.14,
     basis: "s840 TCA 1997 – client entertainment NOT deductible; subsistence at civil service rates only when travelling for trade",
@@ -387,8 +407,6 @@ const TAX_RULES = [
     basis: "s81 TCA 1997 – not wholly & exclusively for trade; personal expenditure not allowable",
     note: "Personal expenses are not deductible. Do not include in your tax return. Keep separate from business transactions.",
     merchants: [
-      "tesco","dunnes stores","dunnes","lidl","aldi","supervalu","centra","spar",
-      "marks & spencer food","marks spencer","m&s food","freshii","leon restaurants",
       "penneys","primark","zara","h&m","asos","next","river island","tk maxx",
       "netflix","spotify","disney+","amazon prime","apple tv+","apple music","itunes","now tv","sky entertainment",
       "flyefit","energy fitness","pure gym","total fitness","westwood club",
@@ -398,10 +416,10 @@ const TAX_RULES = [
       "trading 212","trade republic","etoro","degiro","revolut invest","revolut stocks","freetrade","t212",
     ],
     keywords: [
-      "grocery shopping","supermarket","personal shopping","clothing store",
-      "gym membership","personal use","netflix","spotify","streaming",
-      "household items","home furnishing","personal care","beauty salon","hairdresser",
-      "vet bill","pet supplies","childcare","creche fee","school fees","crèche",
+      "personal shopping","clothing store","gym membership","personal use",
+      "netflix","spotify","streaming","household items","home furnishing",
+      "personal care","beauty salon","hairdresser","vet bill","pet supplies",
+      "childcare","creche fee","school fees","crèche",
     ],
   },
 ];

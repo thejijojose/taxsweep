@@ -266,7 +266,7 @@ export function inferTaxCategoryFromMcc(mcc, mccDescription = "") {
   // Restaurants / bars / fast food
   if ([5812, 5813, 5814, 5811].includes(code)) return mk("Meals & Entertainment", 0.92, "MCC food & drink");
   // Grocery / convenience / markets
-  if ([5411, 5422, 5441, 5451, 5499].includes(code)) return mk("Personal / Non-deductible", 0.88, "MCC grocery");
+  if ([5411, 5422, 5441, 5451, 5499].includes(code)) return mk("Groceries", 0.92, "MCC grocery/supermarket");
   // Betting / lottery / gaming
   if ([7995, 7800, 7801, 7802].includes(code)) return mk("Personal / Non-deductible", 0.94, "MCC betting/gaming");
   // Service stations / fuel
