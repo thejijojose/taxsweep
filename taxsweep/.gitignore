@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+.claude/
+scratch/
+test_ml.js
+*.csv
+*.xlsx
+*.pdf

@@ -116,7 +116,7 @@ const GROUPS = [
     merchants: [
       "vodafone", "three", "eir", "gomo", "48", "tesco mobile", "virgin media", "sky broadband",
       "digiweb", "pure telecom", "imagine", "magnet networks", "siren", "lycamobile", "clear mobile",
-      "topup", "top up", "phone bill", "broadband", "internet", "telecom", "mobile",
+      "phone bill", "broadband", "internet", "telecom", "mobile",
     ],
   },
   {

@@ -46,7 +46,7 @@ const TRAINING_DATA = [
   { c: "Equipment & Tools", text: "construction concrete windows roofing scaffolding plumbing carpet glazing pumping pest control painter plumber tiling window" },
 
   // ── Phone & Internet ──────────────────────────────────────────────────────
-  { c: "Phone & Internet", text: "telecom mobile broadband internet wifi phone call plan network fiber data topup" },
+  { c: "Phone & Internet", text: "telecom mobile broadband internet wifi phone call plan network fiber data" },
   { c: "Phone & Internet", text: "vodafone eir eircom virgin sky three talktalk comreg digiweb imagine fibrus airwire rural broadband licence" },
 
   // ── Marketing & Advertising ───────────────────────────────────────────────
