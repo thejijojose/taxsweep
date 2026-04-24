@@ -1263,7 +1263,7 @@ function ReceiptButton({ txId, hasReceipt, receiptUrl, onLoad, onUpload, onDelet
 // ══════════════════════════════════════════════════════════════════════════════
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
-export default function TaxSweep() {
+export default function TaxSweep({ onHome }) {
   const [stage, setStage] = useState("upload");
   const [transactions, setTransactions] = useState([]);
   const [analyzed, setAnalyzed] = useState([]);
@@ -1520,6 +1520,11 @@ export default function TaxSweep() {
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: C.body, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
       <PrintArea />
       <ViewToggle mode={viewMode} onChange={setViewMode} />
+      {onHome && (
+        <button onClick={onHome} style={{ position: "fixed", top: 16, left: 20, background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: C.muted, fontSize: 12, fontFamily: C.body, padding: "4px 0", zIndex: 200 }}>
+          ← Home
+        </button>
+      )}
       <div className="ts-fade-up" style={{ textAlign: "center", marginBottom: 32 }}>
         <div style={{ fontFamily: C.display, fontSize: 40, fontWeight: 700, color: C.text, letterSpacing: "-.02em", lineHeight: 1 }}>
           Tax<span style={{ color: C.green }}>Sweep</span>
